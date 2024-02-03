@@ -1,2 +1,4 @@
 dash
 pandas
+dash_bootstrap_components
+python-dotenv
