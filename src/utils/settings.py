@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 
 cwd = os.getcwd()
-dotenv_path = os.path.join(cwd, os.getenv('ENVIRONMENT_FILE', '.env.development'))
+dotenv_path = os.path.join(cwd, os.getenv('ENVIRONMENT_FILE', '.env'))
 load_dotenv(dotenv_path=dotenv_path, override=True)
 
 # APP_HOST = os.environ.get('HOST')

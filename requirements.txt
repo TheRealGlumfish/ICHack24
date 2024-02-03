@@ -1,5 +1,8 @@
-dash
+dash~=2.15.0
 pandas
 dash_bootstrap_components
-python-dotenv
-requests
+python-dotenv~=1.0.1
+requests~=2.31.0
+
+plotly~=5.18.0
+Flask~=3.0.1
