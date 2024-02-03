@@ -5,6 +5,13 @@ import dash_bootstrap_components as dbc
 from flask import Flask
 # from utils.settings import APP_HOST, APP_PORT, APP_DEBUG, DEV_TOOLS_PROPS_CHECK
 import os
+import sys
+from utils.settings import APP_ID
+from utils.settings import APP_KEY
+
+if APP_ID == None and APP_KEY == None:
+    print('APP_KEY and/or APP_ID has not been set.\nExiting...', file=sys.stderr)
+    quit(128)
 
 server = Flask(__name__)
 
