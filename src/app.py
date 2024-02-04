@@ -136,7 +136,7 @@ def update_map(slider, click):
 
 @app.callback(Output("latitude-out", "children"),
               Output("longitude-out", "children"),
-              Output("residence-data", "data"),
+              Output("residence-data", "data", allow_duplicate=True),
               [Input("map-london", "clickData")], prevent_initial_call=True)
 def update_on_map_click(clickData):
     lat = clickData['points'][0]['lat']
@@ -146,9 +146,10 @@ def update_on_map_click(clickData):
 
 @app.callback(Output("latitude-out", "children", allow_duplicate=True),
               Output("longitude-out", "children", allow_duplicate=True),
+              Output("residence-data", "data", allow_duplicate=True),
               [Input("input-longitude", "value"), Input("input-latitude", "value")], prevent_initial_call=True)
 def update_on_user_write(lon, lat):
-    return lon, lat
+    return lon, lat, {"Latitude": lat, "Longitude": lon}
 
 
 
