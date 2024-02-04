@@ -169,6 +169,8 @@ def update_map(value):
     figure.update_layout(clickmode="event+select", margin={'r': 0, 't': 0, 'l':0, 'b':0})
     return figure
 
+prev_stat = None
+
 @app.callback(Output("latitude-out", "children"),
               Output("longitude-out", "children"),
               Output("residence-data", "data", allow_duplicate=True),
@@ -177,7 +179,9 @@ def update_on_map_click(clickData):
     if clickData is not None:
         postcode = clickData['points'][0]['location']
         entry = data_frame.loc[data_frame['Postcode'] == postcode]
+        price = entry['Price'].iloc[0]
         lat, lon = entry['Latitude'].iloc[0], entry['Longitude'].iloc[0]
+
     return lon, lat, {"Latitude": lat, "Longitude": lon}
 
 
