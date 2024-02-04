@@ -1,5 +1,6 @@
 dash~=2.15.0
 pandas
+pyarrow
 dash_bootstrap_components
 python-dotenv~=1.0.1
 requests~=2.31.0
