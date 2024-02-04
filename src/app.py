@@ -13,18 +13,23 @@ from utils.settings import APP_ID
 from utils.settings import APP_KEY
 import json
 
-if APP_ID == None and APP_KEY == None:
+import resource_loader
+
+if APP_ID is None and APP_KEY is None:
     print('APP_KEY and/or APP_ID has not been set.\nExiting...', file=sys.stderr)
     quit(128)
+
+# Get GeoJSON data for postcode sectors
+postcode_sectors = resource_loader.get_postcode_geojson()
+# Get average house price data for colouring
+data_frame = resource_loader.get_postcode_coord_price_data()
 
 from dash.dependencies import Input, Output, State
 
 server = Flask(__name__)
 
 app = dash.Dash(__name__, server=server, external_stylesheets=[dbc.themes.LITERA])
-
 app.config.suppress_callback_exceptions = True
-
 app.layout = html.Div([
     dbc.Row([
         dbc.Col(
@@ -102,7 +107,6 @@ def update_destinations(submit, residence_data, destinations_data):
               [Input("clear", "n_clicks")], prevent_initial_call=True)
 def clear(submit):
     residence_data = {'Latitude': 'N/A', 'Longitude': 'N/A'}
-    destinations_data = {'Latitude': ['N/A'], 'Longitude': ['N/A']}
     return residence_data, update_residence(submit, residence_data)[0], None, update_destinations(submit, residence_data, None)[0], 'N/A', 'N/A'
 
 @app.callback(Output("slider-output-container", "children"),
@@ -110,37 +114,39 @@ def clear(submit):
 def update_slider(value):
     return 'You have selected "{}"'.format(value)
 
-price_data = pandas.read_csv('assets/postcode_to_coord_and_price.csv')
 
 @app.callback(Output("map-london", "figure"),
-              [Input("weight-slider", "value"),
-               Input("map-london", "clickData")])
-def update_map(slider, click):
-    # df = pandas.read_csv("assets/postcode_to_coord.csv")
+              [Input("weight-slider", "value")])
+def update_map(value):
 
-    # with open('london_boroughs.json', 'r') as f:
-    #     geoJson = json.load(f)
 
-    # fig = px.choropleth(
-    #     df, geojson=geoJson, color = None, color_continuous_scale="Viridis", locations=None, scope="London", labels = {}
-    # )
+    figure = px.choropleth_mapbox(
+        data_frame,
+        geojson=postcode_sectors,
+        locations="Postcode",
+        featureidkey="properties.RMSect",
+        color="Price",
+        color_continuous_scale="Jet",
+        color_continuous_midpoint=data_frame['Price'].median(),
+        mapbox_style="carto-positron",
+        center={"lat": 51.5074, "lon": -0.1278},
+        range_color=(150,1200),
+        zoom=10,
+        opacity=0.5
+    )
 
-    #fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
-    
-    maptooltip = {'Price': True, '% of London Avg': True, 'Longitude': False, 'Latitude': False}
-
-    map = px.scatter_mapbox(price_data, lat = 'Latitude', lon = 'Longitude', hover_name = 'Postcode', hover_data = maptooltip)
-    map.update_layout(mapbox = {'style': 'open-street-map'}, margin={'r': 0, 't': 0, 'l':0, 'b':0}, clickmode='event+select')
-
-    return map
+    figure.update_layout(clickmode="event+select", margin={'r': 0, 't': 0, 'l':0, 'b':0})
+    return figure
 
 @app.callback(Output("latitude-out", "children"),
               Output("longitude-out", "children"),
               Output("residence-data", "data", allow_duplicate=True),
               [Input("map-london", "clickData")], prevent_initial_call=True)
 def update_on_map_click(clickData):
-    lat = clickData['points'][0]['lat']
-    lon = clickData['points'][0]['lon']
+    if clickData is not None:
+        postcode = clickData['points'][0]['location']
+        entry = data_frame.loc[data_frame['Postcode'] == postcode]
+        lat, lon = entry['Latitude'].iloc[0], entry['Longitude'].iloc[0]
     return lon, lat, {"Latitude": lat, "Longitude": lon}
 
 
