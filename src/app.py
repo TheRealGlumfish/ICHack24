@@ -53,21 +53,24 @@ app.layout = html.Div([
             dbc.ButtonGroup([dbc.Button("Submit Residence", id="submit-residence", color="primary"), 
                              dbc.Button("Submit Destination", id="submit-destination", color="secondary"),
                              dbc.Button("Clear", id="clear", color="danger")]),
+            dbc.Spinner(),
             dbc.Label("Residence"),
-            dcc.Graph(id="residence-data-table"),
+            dcc.Graph(id="residence-data-table", style={"height":"50px"}),
             dcc.Store(id="destinations-data"),
             dbc.Label("Destinations"),
-            dcc.Graph(id="destinations-data-table"),
+            dcc.Graph(id="destinations-data-table", style={"height":"100px"}),
             dbc.Button("Find", id="submit-find", color="success"),
+            dbc.Spinner(color="success"),
             dcc.Graph(id="journey-data-table"),
-        ], width={"size": 2, "offset": 1}),
+        ], width={"size": 3, "offset": 1}),
     ]),
     dbc.Row(
     dbc.Col(
         dbc.Card([
-            html.H5(children=["Travel Vs Cost"], className="text-center"),
-            dcc.Slider(0, 10, 1, value= 5, id="weight-slider"),
-            html.Div(id="slider-output-container")
+            html.H5(children=["Hourly Salary"], className="text-center"),
+            dcc.Slider(15, 350, 15, id="weight-slider"),
+            html.Div(id="slider-output-container"),
+            dcc.Store(id="journey-data")
         ])
     )
     )
@@ -76,6 +79,7 @@ app.layout = html.Div([
 
 
 @app.callback(Output("journey-data-table", "figure"),
+              Output("journey-data", "data"),
               [Input("submit-find", "n_clicks")],
               [State("residence-data-data", "data"),
                State("destinations-data", "data")], prevent_initial_call=True)
@@ -108,7 +112,7 @@ def fetch_journeys(sumbit, residence_data, destination_data):
                  cells=dict(values=[journey_data['Name'], journey_data['Latitude'], journey_data['Longitude'], journey_data['Journey Times'], journey_data['Avg Time'], journey_data['Max Time'], journey_data['Min Time']]))
                      ])
     journey_table.update_layout(margin=dict(r=0, l=0, t=0, b=0))
-    return journey_table 
+    return journey_table, journey_data
 
 @app.callback(Output("residence-data-table", "figure"),
               Output("residence-data-data", "data"),
@@ -154,9 +158,13 @@ def clear(submit):
     return residence_data, update_residence(submit, residence_data)[0], None, update_destinations(submit, 'N/A', destination_data, None)[0], 'N/A', 'N/A'
 
 @app.callback(Output("slider-output-container", "children"),
-                     [Input("weight-slider", "value")])
-def update_slider(value):
-    return 'You have selected "{}"'.format(value)
+                     [Input("weight-slider", "value")],
+                     [State("journey-data", "data")], prevent_intial_call=True)
+def update_slider(value, journey_data):
+    minutes_daily = sum(journey_data['Min Time'])
+    travel_loss = (float(minutes_daily) / float(60)) * value
+    travel_loss_annual = travel_loss * 365
+    return f'Minutes spent travelling: {minutes_daily}\nTravel earnings loss (daily/annually): {travel_loss}/{travel_loss_annual} GBP\n'
 
 
 @app.callback(Output("map-london", "figure"),
@@ -181,8 +189,6 @@ def update_map(value):
     figure.update_layout(clickmode="event+select", margin={'r': 0, 't': 0, 'l':0, 'b':0})
     return figure
 
-prev_stat = None
-
 @app.callback(Output("latitude-out", "children"),
               Output("longitude-out", "children"),
               Output("residence-data", "data", allow_duplicate=True),
@@ -191,9 +197,7 @@ def update_on_map_click(clickData):
     if clickData is not None:
         postcode = clickData['points'][0]['location']
         entry = data_frame.loc[data_frame['Postcode'] == postcode]
-        price = entry['Price'].iloc[0]
         lat, lon = entry['Latitude'].iloc[0], entry['Longitude'].iloc[0]
-
     return lon, lat, {"Latitude": lat, "Longitude": lon}
 
 
