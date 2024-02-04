@@ -162,7 +162,7 @@ def clear(submit):
                      [State("journey-data", "data")], prevent_intial_call=True)
 def update_slider(value, journey_data):
     minutes_daily = sum(journey_data['Min Time'])
-    travel_loss = (float(minutes_daily) / float(60)) * value
+    travel_loss = (float(minutes_daily) / float(60)) * value * 2
     travel_loss_annual = travel_loss * 365
     return f'Minutes spent travelling: {minutes_daily}\nTravel earnings loss (daily/annually): {travel_loss}/{travel_loss_annual} GBP\n'
 
