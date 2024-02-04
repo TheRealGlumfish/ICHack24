@@ -83,17 +83,29 @@ def fetch_journeys(sumbit, residence_data, destination_data):
     residence_lat = residence_data['Latitude']
     residence_lon = residence_data['Longitude']
     destination_data['Journey Times'] = []
+    destination_data['Avg Time'] = []
+    destination_data["Max Time"] = []
+    destination_data["Min Time"] = []
     # destination_data['Journey Fares'] = []
     for (destination_lat, destination_lon) in zip(destination_data['Latitude'], destination_data['Longitude']):
         journeys = tfl_api.journey(f'{residence_lat},{residence_lon}', f'{destination_lat},{destination_lon}')
         journey_times = tfl_api.journey_time(journeys);
         # journey_fares = tfl_api.journey_fares(journeys);
         destination_data['Journey Times'].append(journey_times);
+        destination_data['Avg Time'].append(round(sum(journey_times) / len(journey_times), 2))
+        destination_data["Max Time"].append(max(journey_times))
+        destination_data["Min Time"].append(min(journey_times))
         # destination_data['Journey Fares'].append(journey_fares);
+
+    # print(len(destination_data['Journey Times']))
+    # destination_data['Avg Time'] = sum(destination_data['Journey Times']) / len(destination_data['Journey Times'])
+    # destination_data['Max Time'] = max(destination_data['Journey Times'])
+    # destination_data['Min Time'] = min(destination_data['Journey Times'])
+
     journey_data = destination_data
 
-    journey_table = go.Figure(data=[go.Table(header=dict(values=['Name', 'Latitude', 'Longitude', 'Journey Times']),
-                 cells=dict(values=[journey_data['Name'], journey_data['Latitude'], journey_data['Longitude'], journey_data['Journey Times']]))
+    journey_table = go.Figure(data=[go.Table(header=dict(values=['Name', 'Latitude', 'Longitude', 'Journey Times', 'Avg Time', 'Max Time', 'Min Time']),
+                 cells=dict(values=[journey_data['Name'], journey_data['Latitude'], journey_data['Longitude'], journey_data['Journey Times'], journey_data['Avg Time'], journey_data['Max Time'], journey_data['Min Time']]))
                      ])
     journey_table.update_layout(margin=dict(r=0, l=0, t=0, b=0))
     return journey_table 
