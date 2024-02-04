@@ -12,8 +12,10 @@ import sys
 from utils.settings import APP_ID
 from utils.settings import APP_KEY
 import json
+import time
 
 import resource_loader
+import tfl_api
 
 if APP_ID is None and APP_KEY is None:
     print('APP_KEY and/or APP_ID has not been set.\nExiting...', file=sys.stderr)
@@ -42,8 +44,9 @@ app.layout = html.Div([
                 dbc.Label("Coordinates"),
                 dcc.Store(id="residence-data"),
                 dcc.Store(id="residence-data-data"),
-                dbc.Input(id="input-latitude", placeholder="Latitude Here", type="number", style={"margin-bottom":"10px", "margin-top":"10px"}),
-                dbc.Input(id="input-longitude", placeholder="Longitude Here", type="number", style={"margin-bottom":"20px"}),
+                dbc.Input(id="input-latitude", placeholder="Latitude", type="number", style={"margin-bottom":"10px", "margin-top":"10px"}),
+                dbc.Input(id="input-longitude", placeholder="Longitude", type="number", style={"margin-bottom":"20px"}),
+                dbc.Input(id="input-name", placeholder="Name", type="string", style={"margin-bottom":"20px", "margin-top": "10px"}),
             ]),
             html.Div(id="longitude-out"),
             html.Div(id="latitude-out"),
@@ -55,6 +58,8 @@ app.layout = html.Div([
             dcc.Store(id="destinations-data"),
             dbc.Label("Destinations"),
             dcc.Graph(id="destinations-data-table"),
+            dbc.Button("Find", id="submit-find", color="success"),
+            dcc.Graph(id="journey-data-table"),
         ], width={"size": 2, "offset": 1}),
     ]),
     dbc.Row(
@@ -67,6 +72,31 @@ app.layout = html.Div([
     )
     )
 ])
+
+
+
+@app.callback(Output("journey-data-table", "figure"),
+              [Input("submit-find", "n_clicks")],
+              [State("residence-data-data", "data"),
+               State("destinations-data", "data")], prevent_initial_call=True)
+def fetch_journeys(sumbit, residence_data, destination_data):
+    residence_lat = residence_data['Latitude']
+    residence_lon = residence_data['Longitude']
+    destination_data['Journey Times'] = []
+    # destination_data['Journey Fares'] = []
+    for (destination_lat, destination_lon) in zip(destination_data['Latitude'], destination_data['Longitude']):
+        journeys = tfl_api.journey(f'{residence_lat},{residence_lon}', f'{destination_lat},{destination_lon}')
+        journey_times = tfl_api.journey_time(journeys);
+        # journey_fares = tfl_api.journey_fares(journeys);
+        destination_data['Journey Times'].append(journey_times);
+        # destination_data['Journey Fares'].append(journey_fares);
+    journey_data = destination_data
+
+    journey_table = go.Figure(data=[go.Table(header=dict(values=['Name', 'Latitude', 'Longitude', 'Journey Times']),
+                 cells=dict(values=[journey_data['Name'], journey_data['Latitude'], journey_data['Longitude'], journey_data['Journey Times']]))
+                     ])
+    journey_table.update_layout(margin=dict(r=0, l=0, t=0, b=0))
+    return journey_table 
 
 @app.callback(Output("residence-data-table", "figure"),
               Output("residence-data-data", "data"),
@@ -82,19 +112,20 @@ def update_residence(submit, residence_data):
 @app.callback(Output("destinations-data-table", "figure"),
               Output("destinations-data", "data"),
               [Input("submit-destination", "n_clicks")],
-              [State("residence-data", "data"), State("destinations-data", "data")], prevent_initial_call=True)
-def update_destinations(submit, residence_data, destinations_data):
+              [State("input-name", "value"), State("residence-data", "data"), State("destinations-data", "data")], prevent_initial_call=True)
+def update_destinations(submit, name, residence_data, destinations_data):
     if destinations_data is None:
-        merged_data = {'Latitude': [residence_data['Latitude']], 'Longitude': [residence_data['Longitude']]}
+        merged_data = {'Name': [name], 'Latitude': [residence_data['Latitude']], 'Longitude': [residence_data['Longitude']]}
     else:
         merged_data = destinations_data
         merged_data['Latitude'].append(residence_data['Latitude'])
         merged_data['Longitude'].append(residence_data['Longitude'])
-    destinations_table = go.Figure(data=[go.Table(header=dict(values=['Latitude', 'Longitude']),
-                 cells=dict(values=[merged_data['Latitude'], merged_data['Longitude']]))
+        merged_data['Name'].append(name)
+    destinations_table = go.Figure(data=[go.Table(header=dict(values=['Name', 'Latitude', 'Longitude']),
+                 cells=dict(values=[merged_data['Name'], merged_data['Latitude'], merged_data['Longitude']]))
                      ])
     destinations_table.update_layout(margin=dict(r=0, l=0, t=0, b=0))
-    if residence_data=={'Latitude': 'N/A', 'Longitude': 'N/A'} and destinations_data is None:
+    if residence_data=={'Name': 'N/A', 'Latitude': 'N/A', 'Longitude': 'N/A'} and destinations_data is None:
         merged_data = None
     return destinations_table, merged_data
 
@@ -107,7 +138,8 @@ def update_destinations(submit, residence_data, destinations_data):
               [Input("clear", "n_clicks")], prevent_initial_call=True)
 def clear(submit):
     residence_data = {'Latitude': 'N/A', 'Longitude': 'N/A'}
-    return residence_data, update_residence(submit, residence_data)[0], None, update_destinations(submit, residence_data, None)[0], 'N/A', 'N/A'
+    destination_data = {'Name': 'N/A', 'Latitude': 'N/A', 'Longitude': 'N/A'}
+    return residence_data, update_residence(submit, residence_data)[0], None, update_destinations(submit, 'N/A', destination_data, None)[0], 'N/A', 'N/A'
 
 @app.callback(Output("slider-output-container", "children"),
                      [Input("weight-slider", "value")])
@@ -118,7 +150,6 @@ def update_slider(value):
 @app.callback(Output("map-london", "figure"),
               [Input("weight-slider", "value")])
 def update_map(value):
-
 
     figure = px.choropleth_mapbox(
         data_frame,

@@ -20,4 +20,9 @@ def journey(source, destination):
 def journey_time(response):
     times = [journey['duration'] for journey in response['journeys']]
     return times
+
+# Returns the fares of each journey
+def journey_fares(response):
+    fares = [journey['fare']['totalCost'] for journey in response['journeys']]
+    return fares
         
