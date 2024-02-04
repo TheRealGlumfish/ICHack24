@@ -14,6 +14,7 @@ from utils.settings import APP_KEY
 import json
 
 import resource_loader
+import tfl_api
 
 if APP_ID is None and APP_KEY is None:
     print('APP_KEY and/or APP_ID has not been set.\nExiting...', file=sys.stderr)
@@ -119,7 +120,6 @@ def update_slider(value):
               [Input("weight-slider", "value")])
 def update_map(value):
 
-
     figure = px.choropleth_mapbox(
         data_frame,
         geojson=postcode_sectors,
@@ -138,6 +138,8 @@ def update_map(value):
     figure.update_layout(clickmode="event+select", margin={'r': 0, 't': 0, 'l':0, 'b':0})
     return figure
 
+prev_stat = None
+
 @app.callback(Output("latitude-out", "children"),
               Output("longitude-out", "children"),
               Output("residence-data", "data", allow_duplicate=True),
@@ -146,7 +148,19 @@ def update_on_map_click(clickData):
     if clickData is not None:
         postcode = clickData['points'][0]['location']
         entry = data_frame.loc[data_frame['Postcode'] == postcode]
+        price = entry['Price'].iloc[0]
         lat, lon = entry['Latitude'].iloc[0], entry['Longitude'].iloc[0]
+        stat_id, stat_name = tfl_api.get_nearest_station(lat, lon)
+
+        global prev_stat
+        if prev_stat is None:
+            print(f'Starting at {stat_name}')
+            prev_stat = {'naptanId': stat_id, 'commonName': stat_name}
+        else:
+            travel_time = tfl_api.journey_time(prev_stat['naptanId'], stat_id)
+            print(f"{prev_stat['commonName']} -> {stat_name} is {travel_time} mins")
+            prev_stat = {'naptanId': stat_id, 'commonName': stat_name}
+
     return lon, lat, {"Latitude": lat, "Longitude": lon}
 
 
