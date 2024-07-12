@@ -3,7 +3,7 @@ pandas
 pyarrow
 dash_bootstrap_components
 python-dotenv~=1.0.1
-requests~=2.31.0
+requests>=2.32.0
 
 plotly~=5.18.0
 Flask~=3.0.1
